@@ -28,9 +28,9 @@ Explaination: I first download the file with wget and unzip it. From the data I 
 
 <<bash-chunk1, engine='bash', tidy=TRUE>>=
 wget -O p2.csv "http://data.un.org/Handlers/DownloadHandler.ashx?DataFilter=itemCode:526&DataMartId=FAO&Format=csv&c=2,3,4,5,6,7&s=countryName:asc,elementCode:asc,year:desc"
-unzip p2.csv
+unzip -p p2.csv > q2a.csv
 #change the comma in the first column to underscore
-sed -e 's/, /_/g' UNdata_Export_20170904_104711797.csv > q1.csv
+sed -e 's/, /_/g' q2a.csv > q1.csv
 #create one file for countries, and the other for regions
 grep + q1.csv > region.csv
 grep -v + q1.csv > country.csv
