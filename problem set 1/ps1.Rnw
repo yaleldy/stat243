@@ -79,7 +79,7 @@ The code for section 4 is here:
 #\section{Question 4}
 #The height of the water level in Lake Huron fluctuates over time. Here I ’analyze’ #the variation using R. I show a histogram of the lake levels 
 #for the period \Sexpr{start(LakeHuron)[1]} to \Sexpr{end(LakeHuron)[1]}.
-#<<r-plot, fig.height = 3>>=
+#<<r-plot, fig.width=3, fig.height=4>>=
 #hist(LakeHuron)
 #lowHi <- c(which.min(LakeHuron), which.max(LakeHuron))
 #earExtrema <- attributes(LakeHuron)$tsp[1]-1 + lowHi
