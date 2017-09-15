@@ -1,0 +1,191 @@
+\documentclass{article}
+
+<<setup, include=FALSE>>=
+library(knitr)
+library(stringr)
+library(stringi)
+library(rvest)
+library(testthat)
+@
+
+
+\begin{document}
+\title{Problem set 2}
+\author{Dongyu Lang\\SID: 24174288}
+\date{September, 13, 2017}
+
+\maketitle
+\section{Question 1 (a)}
+
+<<r-chunk1,tidy=TRUE>>=
+chars <- sample(letters, 1e6, replace = TRUE)
+write.table(chars, file = 'tmp1.csv',
+            row.names = FALSE, quote = FALSE,
+            col.names = FALSE)
+system('ls -l tmp1.csv', intern = TRUE)
+@
+
+The reason that the file has 2,000,000 bytes is that all the letters have 1,000,000 bytes and the "/n"s have 1,000,000 bytes.
+
+<<r-chunk2,tidy=TRUE>>=
+chars <- paste(chars, collapse = '')
+write.table(chars, file = 'tmp2.csv', 
+            row.names = FALSE, quote = FALSE,
+            col.names = FALSE)
+system('ls -l tmp2.csv', intern = TRUE)
+@
+
+The reason that the file has 1,000,001 bytes is that all the letters have 1,000,000 bytes; however, there is only one "/n" in this situation, which is only 1 byte.
+
+<<r-chunk3,tidy=TRUE>>=
+nums <- rnorm(1e6)
+save(nums, file = 'tmp3.Rda')
+system('ls -l tmp3.Rda', intern = TRUE)
+write.table(nums, file = 'tmp4.csv', 
+            row.names = FALSE, quote = FALSE,
+            col.names = FALSE, sep = ',')
+system('ls -l tmp4.csv', intern = TRUE)
+write.table(round(nums, 2), file = 'tmp5.csv',
+            row.names = FALSE, quote = FALSE, 
+            col.names = FALSE, sep = ',')
+system('ls -l tmp5.csv', intern = TRUE)
+@
+
+
+The reason that tmp4.csv has over 18,000,000 bytes is that the delimiters have 1,000,000 bytes, and each number is 17 digits; thus it is 17 bytes or 18 bytes(if it is negative). Thus, The numbers have in total over 17,000,000 bytes. 
+
+The reason that tmp5.csv has over 5,000,000 bytes is that the delimiters have 1,000,000 bytes, and each number is 4 digits; thus it is 4 bytes or 5 bytes (if it is negative). Thus, the numbers have in total over 5,000,000 bytes.
+
+The reason that tmp3.Rda has just over 7,000,000 bytes is that we saved the numbers all in binary format; thus, each number takes fewer bytes, and in total, they have fewer bytes than in tmp4.csv. In addition, save() compressed the file.
+
+\section{Question 1 (b)}
+
+<<r-chunk4,tidy=TRUE>>=
+chars <- sample(letters, 1e6, replace = TRUE)
+chars <- paste(chars, collapse = '')
+save(chars, file = 'tmp6.Rda')
+system('ls -l tmp6.Rda', intern = TRUE)
+
+chars <- rep('a', 1e6)
+chars <- paste(chars, collapse = '')
+save(chars, file = 'tmp7.Rda')
+system('ls -l tmp7.Rda', intern = TRUE)
+@
+
+I noticed that both of the files are not too large compared with the files in part(a). The reason is that the function save() can reduce the file size considerably by compression. The reason that tmp7.Rda is way smaller than the size of tmp6.Rda is that the save() detects the pattern for "a"; thus, save() makes it much smaller.
+
+
+\section{Question 2 (a)}
+
+The function takes in an input that is the researcher's name. after typing in the researcher's name in Google Scholar, We can find out the URL has the pattern that the name is between the URL; thus, I constructed the URL using the researcher's name, and get all the hyperlinks in the website. I grep the citation page using the pattern of "citations?user=". And also get the researcher ID from the citation page URL.
+<<r-chunka,tidy=TRUE>>=
+getURLID = function (researcher) {
+  Sepname = strsplit(researcher, ' ')[[1]]
+  Firstname = Sepname[1]
+  Lastname = Sepname[length(Sepname)]
+  URL = paste("https://scholar.google.com/scholar?q=",
+              Firstname,"+",Lastname,
+              "&btnG=&hl=en&as_sdt=0%2C5", sep="")
+  gethtml = paste(readLines(URL,warn = F), collapse="\n")
+  hyperlink = str_match_all(gethtml, "<a href=\"(.*?)\"")
+  IDindex = grep("citations\\?user=",hyperlink[[1]][,2])
+  CitationPage = paste("https://scholar.google.com",
+          hyperlink[[1]][,2][IDindex[1]],sep = "")
+  ResearcherID = stri_extract_all_regex(CitationPage, 
+                              '=(.*?)&')[[1]][1]
+  ResearcherID = sub('=', '', ResearcherID)
+  ResearcherID = sub('&', '', ResearcherID)
+  if (is.na(ResearcherID)) {
+    return ("The author is not in Google Scholar")
+  }
+  return (c(CitationPage,ResearcherID))
+}
+getURLID("Geoffrey Hinton")
+@
+
+\section{Question 2 (b)}
+
+
+I look at the developer tool from Chrome, when right click the title, and click inspect. I find out that it is in the class of gsc\_a\_at. Similarly, the author and journal are in gs\_gray. Year is in gdc\_a\_h, and number of citation is in gsc\_a\_ac. Thus, I get all the related information from these nodes.
+
+<<r-chunkb,tidy=TRUE>>=
+infodata = function (citaionpage) {
+  intocitation = read_html(citaionpage)
+  title = html_text(html_nodes(intocitation,".gsc_a_at"))
+  year = html_text(html_nodes(intocitation,".gsc_a_h"))[-1]
+  Citedby = html_text(html_nodes(intocitation,".gsc_a_ac"))
+  authorandjournal = html_text(html_nodes(intocitation,".gs_gray"))
+  author = authorandjournal[(seq(1,length(authorandjournal),2))]
+  journalyear = strsplit(authorandjournal[(seq(2,
+                length(authorandjournal),2))],",(?=[^,]+$)",perl=TRUE)
+  journal = list(0)
+  for (i in 1:length(title)){
+    journal[i] = journalyear[[i]][1]
+  }
+  journal = unlist(journal)
+  citationdataframe = data.frame(title=title, 
+                      author = author, journal = journal,
+                      year=year, cited_by=Citedby)
+  return (citationdataframe)
+}
+head(infodata(getURLID("Michael Jordan")[1]))
+@
+
+\section{Question 2 (c)}
+
+I want to test first if the function in part A returns the right results. Secondly, I test if the answer in part B returns the right dimension. Lastly, I test if the function can return "The author is not in Google Scholar" if I type in an nonexist researcher.
+
+<<r-chunkc,tidy=TRUE>>=
+test_that("test for the citation URL, researcher ID and dataframe", {
+  
+  totest = getURLID("Geoffrey Hinton")
+  datatotest = infodata(totest[1])
+  noauthor = getURLID("asdaxzc asdasfasdasd")
+  
+  expect_that(totest[1], 
+    equals("https://scholar.google.com/citations?user=JicYPdAAAAAJ&amp;hl=en&amp;oe=ASCII&amp;oi=ao"))
+  expect_that(totest[2],equals("JicYPdAAAAAJ"))
+  expect_that( dim(datatotest), equals(c(20,5) ))
+  expect_that(noauthor, equals("The author is not in Google Scholar"))
+})
+@
+
+\section{Question 2 (d)}
+I noticed that when clicked on the right arrow next to "show more", the URL added a "cstart" and a "pagesize"; so I created a new function that tried to find out the maximum cstart that wouldn't cause an error when I called the function in part (b). And the function "getallpub" just combinded each data frame for each cstart, and created the whole new data frame.
+
+<<r-chunkd,tidy=TRUE>>=
+getmaxcstart = function(citationpage, cstart=0, pagesize=20){
+  whentostop = T
+  while (whentostop) {
+    newpage = paste(citationpage,
+      "&cstart=",cstart,"&pagesize=", pagesize, sep="")
+    anyerror = try(infodata(newpage),silent = T)
+    Sys.sleep(2)
+    if (class(anyerror) == "try-error") {
+      whentostop =F
+    } else {
+      cstart = cstart + pagesize
+    }
+  }
+  return (cstart-pagesize)
+}
+
+
+getallpub = function(citationpage, cstart=0, pagesize=20) {
+  dataframe = infodata(citationpage)
+  cstart = cstart + pagesize
+  tostop=getmaxcstart(citationpage)
+  while (cstart <= tostop){
+    Sys.sleep(2)
+    newpage = paste(citationpage,"&cstart=",
+        cstart,"&pagesize=", pagesize, sep="")
+    dataframe= rbind(dataframe,infodata(newpage))
+    cstart = cstart + pagesize
+  }
+  return (dataframe)
+}
+
+dim(getallpub(getURLID("Geoffrey Hinton")[1]))
+@
+
+\end{document}
