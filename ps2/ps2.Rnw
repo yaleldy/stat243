@@ -83,14 +83,18 @@ getURLID = function (researcher) {
   Sepname = strsplit(researcher, ' ')[[1]]
   Firstname = Sepname[1]
   Lastname = Sepname[length(Sepname)]
+  ##Get the URL for the search results
   URL = paste("https://scholar.google.com/scholar?q=",
               Firstname,"+",Lastname,
               "&btnG=&hl=en&as_sdt=0%2C5", sep="")
   gethtml = paste(readLines(URL,warn = F), collapse="\n")
+  ##get all the hyperlinks
   hyperlink = str_match_all(gethtml, "<a href=\"(.*?)\"")
   IDindex = grep("citations\\?user=",hyperlink[[1]][,2])
+  ##get the URL for the citation page
   CitationPage = paste("https://scholar.google.com",
           hyperlink[[1]][,2][IDindex[1]],sep = "")
+  ##get the research ID
   ResearcherID = stri_extract_all_regex(CitationPage, 
                               '=(.*?)&')[[1]][1]
   ResearcherID = sub('=', '', ResearcherID)
@@ -111,6 +115,7 @@ I look at the developer tool from Chrome, when right click the title, and click 
 <<r-chunkb,tidy=TRUE>>=
 infodata = function (citaionpage) {
   intocitation = read_html(citaionpage)
+  ##get the title based on .gsc_a_at
   title = html_text(html_nodes(intocitation,".gsc_a_at"))
   year = html_text(html_nodes(intocitation,".gsc_a_h"))[-1]
   Citedby = html_text(html_nodes(intocitation,".gsc_a_ac"))
@@ -123,6 +128,7 @@ infodata = function (citaionpage) {
     journal[i] = journalyear[[i]][1]
   }
   journal = unlist(journal)
+  ##create the data frame
   citationdataframe = data.frame(title=title, 
                       author = author, journal = journal,
                       year=year, cited_by=Citedby)
@@ -156,6 +162,8 @@ I noticed that when clicked on the right arrow next to "show more", the URL adde
 <<r-chunkd,tidy=TRUE>>=
 getmaxcstart = function(citationpage, cstart=0, pagesize=20){
   whentostop = T
+  ##want to find out what is the maximum cstart
+  ##to make the while loop stop
   while (whentostop) {
     newpage = paste(citationpage,
       "&cstart=",cstart,"&pagesize=", pagesize, sep="")
