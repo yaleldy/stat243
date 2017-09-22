@@ -1,0 +1,4 @@
+I read the third article : Wilson et.al. (http://arxiv.org/pdf/1210.0530v3.pdf)
+
+Question: In some situation, it is hard for us to break our code into 1-hour-long code. Also, for those who are not good at writing code, it is often that they bearly finish anything in this one hour period. So are there some recommendations in these situations?
+
