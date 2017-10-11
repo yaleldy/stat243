@@ -1,0 +1,368 @@
+\documentclass{article}
+
+<<setup, include=FALSE>>=
+library(pryr)
+library(microbenchmark)
+@
+
+\begin{document}
+
+\title{Problem Set 4}
+\author{Dongyu Lang\\SID: 24174288}
+\date{October, 10, 2017}
+
+\maketitle
+
+\section{Question 1 (a)}
+
+<<r-chunk1>>=
+gc()
+x <- 1:1e7
+f <- function(input){
+  data <- input
+  g <- function(param) return(param * data)
+  return(g)
+}
+myFun <- f(x)
+data <- 100
+result <- myFun(3)
+gc()
+@
+
+From the result we can notice that myFun(3) actually is twice larger in memory use than that of x. The reason is that x, input and data all have the same address in function f, and for param * data, there is actually a copy of data, and counting the result itself makes myFun(3) twice the size; thus, the maximum number of copy is 1.
+
+\section{Question 1 (b)}
+
+<<r-chunk2>>=
+x <- 1:1e7
+f <- function(input){
+  data <- input
+  g <- function(param) return(param * data)
+  return(g)
+}
+myFun <- f(x)
+data <- 100
+result = myFun(3)
+length(serialize(x, NULL))
+length(serialize(myFun(3), NULL))
+length(serialize(myFun, NULL))
+@
+
+The results show that the size of serialized myFun(3) is twice the size of serialized x; thus, it supports the result we provided in part (a).
+
+\section{Question 1 (c)}
+<<r-chunk3>>=
+x <- 1:10
+f <- function(data){
+  g <- function(param) return(param * data)
+  return(g)
+}
+myFun <- f(x)
+rm(x)
+data <- 100
+environment(myFun)$data
+@
+
+The reason that the code fails is that when we remove x, we also remove data in the environment of myFun. And myFun(3) could not work, because it tried to find the x, not data. Since we removed x, the error occurred.
+
+\section{Question 1(d)}
+
+<<r-chunk4>>=
+x <- 1:10
+f <- function(data){
+  g <- function(param) return(param * data)
+  return(g)
+}
+myFun <- f(x)
+rm(x)
+## Change "data <- 100" to "x <- 100".
+x <- 100
+myFun(3)
+length(serialize(x,NULL))
+length(serialize(myFun(3),NULL))
+@
+
+I changed data = 100 to x = 100, and it worked. And the size of the serialized myFun(3) has the same size as the serialized x. Thus, I did not create a copy.
+
+\section{Question 2(a)}
+
+<<r-chunk5>>=
+testlist = list(a = rnorm(5), b = 1:10)
+.Internal(inspect(testlist))
+.Internal(inspect(testlist$a))
+.Internal(inspect(testlist$b))
+## Now change an element in a
+testlist$a[2] = 0.123
+## Check the address of the changed list
+.Internal(inspect(testlist))
+.Internal(inspect(testlist$a))
+.Internal(inspect(testlist$b))
+@
+
+From the result, we can notice that R can make change in place without creating a new list or vector. (It should be the same addresses in plain R session, but it changed in Rstudio)
+
+\section{Question 2(b)}
+
+<<r-chunk6>>=
+## create the list
+testlist = list(a = rnorm(5), b = 1:10)
+.Internal(inspect(testlist$a))
+.Internal(inspect(testlist$b))
+
+## Make a copy of the list
+copylist = testlist
+.Internal(inspect(copylist$a))
+.Internal(inspect(copylist$b))
+
+## Make a change to the copylist
+copylist$a[3] = 0.1111
+
+## Check the addresses for testlist and copylist
+.Internal(inspect(testlist))
+.Internal(inspect(testlist$a))
+.Internal(inspect(testlist$b))
+.Internal(inspect(copylist))
+.Internal(inspect(copylist$a))
+.Internal(inspect(copylist$b))
+@
+
+When I created a copy of the testlist, there is no copy-on-change going on, and the addresses of vectors in testlist were the same as those in copylist. However, when I changed an element in vector a in copylist. There was a copy going on for vector a in copylist, but no change happened for vector b in copylist, since the address of vector a changed, but that of vector b did not change in copylist. In addition, the there is a copy of the two lists. (The result is a bit different in plain R session)
+
+\section{Question 2(c)}
+
+<<r-chunk7>>=
+## Create a list of two lists, and each list contains two vectors
+twolists = list(list1 = list(a = rnorm(5), b = 1:10), 
+            list2 = list(c = runif(4), d = c(2,5,8,1,4,9)))
+## Copy the list
+copytwolists = twolists
+
+## Add an element to the second list in copytwolists
+copytwolists$list2$e = 1:20
+
+## Take a look at the address of each vector
+.Internal(inspect(twolists$list1$a))
+.Internal(inspect(copytwolists$list1$a))
+.Internal(inspect(twolists$list1$b))
+.Internal(inspect(copytwolists$list1$b))
+.Internal(inspect(twolists$list2$c))
+.Internal(inspect(copytwolists$list2$c))
+.Internal(inspect(twolists$list2$d))
+.Internal(inspect(copytwolists$list2$d))
+.Internal(inspect(copytwolists$list2$e))
+.Internal(inspect(twolists$list2))
+.Internal(inspect(copytwolists$list2))
+@
+
+From the results, we can notice that the unchanged vectors are shared between the two lists. There is no copy for the vectors that are unchanged. There is a new copy for the newly added vector. In addition, there is a copy for these two lists.
+
+\section{Question 2(d)}
+
+<<r-chunk8>>=
+gc()
+tmp <- list()
+x <- rnorm(1e7)
+tmp[[1]] <- x
+tmp[[2]] <- x
+.Internal(inspect(tmp))
+object.size(tmp)
+gc()
+@
+
+The reason that object.size() generates a different result is that this fucntion provides estimates of the memory use but does not detect if the list is shared or not. Since there is no memory copy made we just copy x to tmp1 and tmp2; thus, object.size() overestimates the memory use.
+
+\section{Question 3}
+
+<<r-chunk9>>=
+load('ps4prob3.Rda') # should have A, n, K
+ll <- function(Theta, A) {
+  sum.ind <- which(A==1, arr.ind=T)
+  logLik <- sum(log(Theta[sum.ind])) - sum(Theta)
+  return(logLik)
+}
+oneUpdate <- function(A, n, K, theta.old, thresh = 0.1) {
+  theta.old1 <- theta.old
+  Theta.old <- theta.old %*% t(theta.old)
+  L.old <- ll(Theta.old, A)
+  q <- array(0, dim = c(n, n, K))
+  for (i in 1:n) {
+    for (j in 1:n) {
+      for (z in 1:K) {
+        if (theta.old[i, z]*theta.old[j, z] == 0){
+          q[i, j, z] <- 0
+        } else {
+          q[i, j, z] <- theta.old[i, z]*theta.old[j, z] /
+            Theta.old[i, j]
+        }
+      }
+    }
+  }
+  theta.new <- theta.old
+  for (z in 1:K) {
+    theta.new[,z] <- rowSums(A*q[,,z])/sqrt(sum(A*q[,,z]))
+  }
+  Theta.new <- theta.new %*% t(theta.new)
+  L.new <- ll(Theta.new, A)
+  converge.check <- abs(L.new - L.old) < thresh
+  theta.new <- theta.new/rowSums(theta.new)
+  return(list(theta = theta.new, loglik = L.new,
+              converged = converge.check))
+}
+# initialize the parameters at random starting values
+temp <- matrix(runif(n*K), n, K)
+theta.init <- temp/rowSums(temp)
+
+# This is the updated function for oneUpdate
+oneUpdate2 <- function(A, n, K, theta.old, thresh = 0.1) {
+  Theta.square <- theta.old %*% t(theta.old)
+  L.old <- ll(Theta.square, A)
+  ## I deleted all the three nested for-loop
+  ## And I add a new matrix qz in repalce for the old 3 dimensional q
+  ## it turns out my qz is the same as q[,,z] for each z in 1:k
+  ## Let's suppose z = 1, a = theta.old and A = Theta.square
+  ## Thus, q[i,j,1]=a[i,1]*a[j,1]/A[i,j].
+  ## So we can actually write the q matrix into some matrix multiplication
+  ## q[,,z] is just theta.old[,z] %*% t(theta.old[,z]) / Theta.square
+  for (z in 1:K) {
+    qz = theta.old[,z] %*% t(theta.old[,z]) / Theta.square
+    theta.old[,z] <- rowSums(A*qz)/sqrt(sum(A*qz))
+  }
+  Theta.square.new <- theta.old %*% t(theta.old)
+  L.new <- ll(Theta.square.new, A)
+  converge.check <- abs(L.new - L.old) < thresh
+  theta.old <- theta.old/rowSums(theta.old)
+  return(list(theta = theta.old, loglik = L.new,
+              converged = converge.check))
+}
+
+# do single update
+originaltime = system.time(out <- oneUpdate(A, n, K, theta.init))
+newtime = system.time(out2 <- oneUpdate2(A, n, K, theta.init))
+## Are the results for old and new method identical?
+identical(out,out2)
+originaltime
+newtime
+## Speedup
+speedup = as.numeric(originaltime[3]/newtime[3])
+speedup
+@
+
+I explained my code and changes inside the code chunk. Beside these changes, I also changed some style of the code to make it clearer, and deleted some memory copy. The result shows that my new method achieve a \Sexpr{speedup} folds speedup
+
+\section{Question 4 (a,b)}
+
+For PIKK
+<<r-chunk10>>=
+## The original one is slow because that first it stores not only index,
+## but also the original numbers. Secondly, it sorts all the n runif; 
+## however, we only need the first k
+PIKK <- function(x, k) {
+  x[sort(runif(length(x)), index.return = TRUE)$ix[1:k]]
+}
+
+## The new method only compares the smallest k numbers, and it saves time
+## by not comparing all the n numbers.
+PIKKnew <- function(x,k) {
+  randomx = runif(length(x))
+  x[randomx <= sort(randomx, partial=k)[k]]
+}
+
+mbmPIKK = microbenchmark("original" = {
+  a <- PIKK(1:10000,500)
+}, "new" = {
+  b <- PIKKnew(1:10000,500)
+})
+
+mbmPIKK
+## Speed up factor
+speedupfactor = summary(mbmPIKK)$mean[1]/summary(mbmPIKK)$mean[2]
+speedupfactor
+@
+
+We can notice that the time was saved by a factor of \Sexpr{speedupfactor}.
+
+Plot for PIKK
+<<r-chunk11>>=
+## For length of n is 10000
+set.seed(100)
+speedup10000 = NULL
+for (i in seq(100,5000,100)) {
+  mbmPIKK10000 = microbenchmark("original" = {
+    a <- PIKK(1:10000,i)
+    }, new = {
+    b <- PIKKnew(1:10000,i)
+  })
+  index = which(i == seq(100,5000,100))
+  speedup10000[index] = summary(mbmPIKK10000)$mean[1]/summary(mbmPIKK10000)$mean[2]
+}
+plot(x = seq(100,5000,100), y = speedup10000, xlab="value of k", 
+     ylab="speed up factor", main = "For length of n is 10000 PIKK")
+@
+
+When I fixed the value of n, and took different values of k, the speed up factors were consistantly over 2. And as k increased, there was a slightly decreasing trend.
+
+
+For FYKD
+<<r-chunk12>>=
+FYKD <- function(x, k) {
+  n <- length(x)
+  for(i in 1:n) {
+    j = sample(i:n, 1)
+    tmp <- x[i]
+    x[i] <- x[j]
+    x[j] <- tmp
+  }
+  return(x[1:k])
+}
+
+## The new function tries to get the index for the minimum value
+## in every for-loop, and set the value to infinity after taking
+## the value to our result.
+FYKDnew <- function(x, k) {
+  n <- length(x)
+  randomx = runif(n)
+  ksample = NULL
+  for(i in 1:k) {
+    tmp <- which.min(randomx)
+    ksample[i] <- x[tmp]
+    randomx[tmp] <- Inf
+  }
+  return(ksample)
+}
+
+mbmFYKD = microbenchmark("original" = {
+  a <- FYKD(1:10000,500)
+}, "new" = {
+  b <- FYKDnew(1:10000,500)
+})
+
+mbmFYKD
+## Speed up factor
+speedupFYKD = summary(mbmFYKD)$mean[1]/summary(mbmFYKD)$mean[2]
+speedupFYKD
+@
+
+We can notice that the time was saved by a factor of \Sexpr{speedupFYKD}. However, this function is still slower than the revised PIKK one.
+
+Plot for FYKD
+
+<<r-chunk13>>=
+## For length of n is 10000
+set.seed(100)
+speedup10000FYKD = NULL
+for (i in seq(100,5000,600)) {
+  mbmFYKD10000 = microbenchmark("original" = {
+    a <- FYKD(1:10000,i)
+    }, new = {
+    b <- FYKDnew(1:10000,i)
+  })
+  indexFYKD = which(i == seq(100,5000,600))
+  speedup10000FYKD[indexFYKD] = summary(mbmFYKD10000)$mean[1]/summary(mbmFYKD10000)$mean[2]
+}
+plot(x = seq(100,5000,600), y = speedup10000FYKD, xlab="value of k", 
+     ylab="speed up factor", main = "For length of n is 10000 FYKD")
+@
+
+This is an interesting graph. When I increase the size of K, the performance for the revised function goes down. Thus, it is good to use this function when k is relatively small.
+
+\end{document}
