@@ -1,0 +1,135 @@
+\documentclass{article}
+
+<<setup, include=FALSE>>=
+library(pryr)
+library(microbenchmark)
+@
+
+
+\begin{document}
+
+\title{Problem Set 5}
+\author{Dongyu Lang\\SID: 24174288}
+\date{October, 17, 2017}
+
+\maketitle
+
+\section{Question 2}
+<<r-chunk1>>=
+bits(2^0)
+@
+01111111111 in binary system is 1023 in decimal number; thus, $2^0\times1=1$
+
+<<r-chunk2>>=
+bits(2^1)
+@
+10000000000 in binary system is 1024 in decimal; thus, $2^1\times1=2$
+
+<<r-chunk3>>=
+bits(2^2)
+@
+10000000001 in binary system is 1025 in decimal; thus, $2^2\times1=4$
+
+<<r-chunk4>>=
+bits(10)
+@
+10000000010 in binary system is 1026 in decimal; 1.01 in binary system is 1.25 in decimal; thus, $2^3\times1.25=10$
+
+For $2^{53}$ and $2^{53}+2$
+<<r-chunk5>>=
+bits(2^53)
+bits(2^53+2)
+@
+
+They can be represented exactly. 10000110100 is the binary format of 1076, thus, $2^{53}\times1=2^{53}$. For $2^{53}+2$, the last digit is 1, thus, $2^{53}\times(1+2^{-52})=2^{53}+2$.
+
+For $2^{53}+1$
+<<r-chunk6>>=
+bits(2^53+1)
+@
+
+It is the same as $2^{53}$, because the minimum increment from $2^{53}$ is $2^{53}\times2^{-52}=2$; thus, the spacing of numbers of this magnitude is 2. 
+
+For $2^{54}$, $2^{54}+1$, $2^{54}+2$, $2^{54}+3$:
+<<r-chunk7>>=
+bits(2^54)
+bits(2^54+1)
+bits(2^54+2)
+bits(2^54+3)
+@
+
+We can notice that the binary format of $2^{54}$ is the same as those of $2^{54}+1$ and $2^{54}+2$. And the binary format of $2^{54}+3$ is different from those three. Because the minimum increment from $2^{54}$ is $2^{54}\times2^{-52}=4$; thus, the spacing of numbers of this magnitude is 4.
+
+For $2^{53}-1$, $2^{53}$, $2^{53}+1$:
+
+<<r-chunk8>>=
+bits(2^53-1)
+bits(2^53)
+bits(2^53+1)
+options(digits = 22)
+2^53-1
+2^53
+2^53+1
+@
+
+The first two results shows that they follow the expression $(-1)^{S}\times1.d\times2^{e-1023}$. The last one is the same as $2^{53}$, because the spacing is 2. And the calculation of these numbers also proves the result.
+
+\section{Question 3 (a)}
+I created a variable called int that contained all the integers from 1 to $10^8$, and a variable called num that contained all the numerics from 1 to $10^8$, and create a copy of both variables.
+
+<<r-chunk9>>=
+options(digits = 9)
+## create intergers and a copy
+int = seq(1:1e8)
+int_copy = int
+microbenchmark(int_copy[1] <- as.integer(3))
+
+## create numerics and a copy
+num = as.numeric(int)
+num_copy = num
+microbenchmark(num_copy[1] <- 3)
+@
+
+It is clear that it takes longer time to copy the numeric values than for integer values.
+
+\section{Question 3 (b)}
+
+<<r-chunk10>>=
+## create intergers and take a subset
+int_new = seq(1:1e7)
+microbenchmark(int_half <- int_new[1:5e6])
+
+## create numerics and take a subset
+num_new = as.numeric(int_new)
+microbenchmark(num_half <- num_new[1:5e6])
+@
+
+From the results, it takes a bit longer to take a subset from numeric vector than integer vector.
+
+\section{Question 4(a)}
+
+The reason that it might be better to use p blocks than n blocks is that often the number of cores we have are less than the number of columns; thus, it is better to have one task per core, that is $m = n/p$ columns per core. In addition, for some small matrices and vectors, a single thread will outperform multiple threads. Moreover, the communication cost is higher in some situation for n blocks.
+
+\section{Question 4(b)}
+
+Approach A has a larger memory use than approach B, because at any single moment, when all p workers are doing their calculations, approach A uses p times more memory use because A has p times larger matrix calculation.
+
+Approach A has a smaller communication cost than approach B, because the total number of communication of A is p, but the total number of communication of B is $p^2$.
+
+\section{Question 5}
+
+<<r-chunk11>>=
+options(digits = 22)
+0.1
+0.2
+0.3
+0.1+0.2
+@
+
+The reason is that 0.1 can not be represented exactly. We can notice that the 22-digit 0.1 is slight higher than true 0.1, and 0.2 is just 2 times 22-digit 0.1; thus, adding 0.1 and 0.2 together will make the result to be higher than 22-digit 0.3.
+
+\section{Collaboration}
+
+In this problem set, I worked with Gaowei Chen.
+
+\end{document}
