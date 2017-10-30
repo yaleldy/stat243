@@ -1,0 +1,32 @@
+## Question 1
+The goal of the simulation is to test that the likelihood ratio statistic based on the Kullback-Leibler information criterion of the null hypothesis that a random sample is drawn from a ko-comnponent normal mixture distribution against the alternative hypothesis that the sample is drawn from a k1-component normal mixture distribution is asymptotically distributed as a weighted sum of independent chi-squared random variables with one degree of freedom, under general regularity conditions.[1]
+
+The metric that they consider is to compare 2LR and the adjusted 2LR versus the nominal level under normal distribution.
+
+## Question 2
+
+The choices that the authors have are 2LR method and the adjusted 2LR method, mixing porportion, sample size and the value of D.
+
+The key aspects that are likely affect the statistical power of the test are mixing porportion, sample size and the value of D.
+
+The authors fail to consider the tests with two different mixing porportions.
+
+## Question 3
+
+The tables do a good job of presenting the simulation study because they show all the results they want to present and are easy to read and compare between different parameters.
+
+However, my alternative suggestion is that since that the Nominal levels are 0.01 and 0.05, but 2LR and adjusted 2LR are in percentage, it is better to make the nominal levels to be consistent with 2LR and the adjusted 2LR.
+
+## Question 4
+
+Table 2 shows that the powers are low for D equals 1 and 2, and powers are reasonable for sample size that is greater than 100. In addition, the there is no obvious evidence that the results differ with different mixing proportions.
+
+Table 4 shows that the test exhibits low power for sample size less than 200 with D1<=4 and D2<=2 and with D1<=2 and D2<=4. Thus the two tables have some similarity. Thus, the results make sense.
+
+## Question 5
+
+1000 simulations are enough in my opinion, while 10 sre not enough, because under 1000 simulations, the results make sense and are consistent according to the tables.
+
+
+Reference
+1. Lo, Yungtai, Nancy R. Mendell, and Donald B. Rubin. "Testing the Number of Components in a Normal Mixture." Biometrika 88, no. 3 (2001): 767-78. http://www.jstor.org/stable/2673445.
